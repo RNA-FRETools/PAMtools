@@ -131,5 +131,6 @@ if file
     fprintf(fileID,'%s',jsontext);
     fclose(fileID);
 end
+close(fig)
 end
 

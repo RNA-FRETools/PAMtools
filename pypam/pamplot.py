@@ -5,6 +5,8 @@ import json
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import scipy
+import pandas as pd
 from matplotlib.patches import Circle, Wedge, Polygon
 from matplotlib.collections import PatchCollection
 import naturalcolors.colorpalette as ncp
@@ -14,13 +16,47 @@ sns.set_style('white')
 sns.set_context("notebook")
 sns.set(font='Arial')
 
-cols = [[0.31, 0.45, 0.56], [0.6, 0.6, 0.6], [0.75, 0.51, 0.38]]
-cmap_list, cmap_linseg = ncp.make_colormap(cols, 'ColorsOfNature')
-colors = ncp.get_colors(cmap_linseg, 6, scramble=True)
+#cols = [[0.31, 0.45, 0.56], [0.6, 0.6, 0.6], [0.75, 0.51, 0.38]]
+cols = [[0.1, 0.1, 0.1], [0.9, 0.9, 0.9]]
+cmap_list, cmap_linseg = ncp.make_colormap(cols, 'grayscale')
+colors = ncp.get_colors(cmap_linseg, 5, scramble=True)
 
 
 def set_ticksStyle(x_size=4, y_size=4, x_dir='in', y_dir='in'):
     sns.set_style('ticks', {'xtick.major.size': x_size, 'ytick.major.size': y_size, 'xtick.direction': x_dir, 'ytick.direction': y_dir})
+
+
+def fit(fun, x_data, y_data, p0, bounds=(-np.inf, np.inf)):
+    """
+    Wrapper for the curve_fit function of the scipy.optimize module.
+    The curve_fit optimizes the mean and sigma parameters
+    while the nnls optimizes the relative weights of the Gaussians.
+
+    Parameters
+    ----------
+    fun : callable
+          The model function f(x,...) taking x values as a first argument followed by the function parameters
+    x_data : array_like
+             array of the independent variable
+    y_data : array_like
+             array of the dependent variable
+    p0 : array_like
+         start values for the fit model
+    bounds : 2-tuple of float or 2-tuple of array_like, optional
+             lower and upper bounds for each parameter in p0. Can be either a tuple of two scalars
+             (same bound for all parameters) or a tuple of array_like with the same length as p0.
+             To deactivate parameter bounds set: `bounds=(-np.inf, np.inf)`
+
+    Returns
+    -------
+    p : ndarray
+        optimized fit parameters
+    p_std : ndarray
+            standard deviation of optimized fit parameters
+    """
+    p, cov = scipy.optimize.curve_fit(fun, x_data, y_data, p0, bounds=bounds)
+    p_std = np.sqrt(np.diag(cov))
+    return p, p_std
 
 
 class Hist2d():
@@ -38,25 +74,26 @@ class Hist2d():
         self.image = {}
         self.hex = {}
         self.scatter = {}
-        self.X1D = {}
-        self.Y1D = {}
-        self.X1DfitSum = {}
-        self.Y1DfitSum = {}
-        self.X1DfitComp = {}
-        self.Y1DfitComp = {}
+        self.XY1D = {}
+        self.XY1DfitSum = {}
+        self.XY1DfitComp = {}
         self.limits = {}
+        self.XY1DfitParam_PAMtools = {}
+        self.XY1DfitParamStd_PAMtools = {}
+        self.XY1DfitSum_PAMtools = {}
+        self.XY1DfitComp_PAMtools = {}
         for i in ['x', 'y', 'z']:
             self.contour[i] = np.array(data['contour'][i]) if data['contour'][i] is not None else None
             self.image[i] = np.array(data['image'][i]) if data['image'][i] is not None else None
             self.hex[i] = np.array(data['hex'][i]) if data['hex'][i] is not None else None
             if i != 'z':
                 self.scatter[i] = data['scatter'][i] if data['scatter'][i] is not None else None
-                self.X1D[i] = np.array(data['X1D'][i])
-                self.Y1D[i] = np.array(data['Y1D'][i])
-                self.X1DfitSum[i] = np.array(data['X1DfitSum'][i])
-                self.Y1DfitSum[i] = np.array(data['Y1DfitSum'][i])
-                self.X1DfitComp[i] = np.array(data['X1DfitComp'][i])
-                self.Y1DfitComp[i] = np.array(data['Y1DfitComp'][i])
+                self.XY1D[('X', i)] = np.array(data['X1D'][i])
+                self.XY1D[('Y', i)] = np.array(data['Y1D'][i])
+                self.XY1DfitSum[('X', i)] = np.array(data['X1DfitSum'][i])
+                self.XY1DfitSum[('Y', i)] = np.array(data['Y1DfitSum'][i])
+                self.XY1DfitComp[('X', i)] = np.array(data['X1DfitComp'][i])
+                self.XY1DfitComp[('Y', i)] = np.array(data['Y1DfitComp'][i])
                 self.limits[i] = data['limits'][i]
         self.contour['levels'] = np.array(data['contour']['levels']) if data['contour']['levels'] is not None else None
         self.cmapLimits = data['cmapLimits']
@@ -77,7 +114,7 @@ class Hist2d():
             patches.append(Polygon(np.vstack((self.hex['x'][:, i], self.hex['y'][:, i])).T))
         return patches
 
-    def plot2Dhist(self, style='contour', axis_labels=('FRET', 'Stoichiometry'), cmap='Blues_r', imgOffset=0):
+    def plot2Dhist(self, style='contour', axis_labels=('FRET', 'Stoichiometry'), cmap='Blues_r', imgOffset=0, PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7]):
         """
         Display a 2D contour / image / hex or scatter plot
 
@@ -91,6 +128,10 @@ class Hist2d():
                colormap object or name of a registered colormap
         imgOffset : int (optional)
                     Lower clipping offset (in %) for image plots
+        PAM_fit : bool (default=True)
+        PAMtools_fit : bool (default=False)
+        label : str
+        hist_color : rgb array
         """
         imgOff_counts = imgOffset * self.image['z'].max() / 100
 
@@ -111,13 +152,32 @@ class Hist2d():
                 ax[1, 0].plot(self.scatter['x'], self.scatter['y'], '.', markersize=1, color='black')
             else:
                 ax[1, 0].contourf(self.contour['x'], self.contour['y'], self.contour['z'], levels=self.contour['levels'], cmap=cmap)
-            ax[0, 0].bar(self.X1D['x'], self.X1D['y'], width=self.X1D['x'][1] - self.X1D['x'][0], color=[0.7, 0.7, 0.7], linewidth=0)
-            ax[1, 1].barh(self.Y1D['x'], self.Y1D['y'], height=self.Y1D['x'][1] - self.Y1D['x'][0], color=[0.7, 0.7, 0.7], linewidth=0)
-            for i in range(self.X1DfitComp['x'].shape[0]):
-                ax[0, 0].plot(self.X1DfitComp['x'][i, :], self.X1DfitComp['y'][i, :], color=colors[i], linestyle='--')
-                ax[1, 1].plot(self.Y1DfitComp['y'][i, :], self.Y1DfitComp['x'][i, :], color=colors[i], linestyle='--')
-            ax[0, 0].plot(self.X1DfitSum['x'], self.X1DfitSum['y'], color='black')
-            ax[1, 1].plot(self.Y1DfitSum['y'], self.Y1DfitSum['x'], color='black')
+            ax[0, 0].bar(self.XY1D[('X', 'x')], self.XY1D[('X', 'y')], width=self.XY1D[('X', 'x')][1] - self.XY1D[('X', 'x')][0], color=hist_color, linewidth=0)
+            ax[1, 1].barh(self.XY1D[('Y', 'x')], self.XY1D[('Y', 'y')], height=self.XY1D[('Y', 'x')][1] - self.XY1D[('Y', 'x')][0], color=hist_color, linewidth=0)
+
+            if PAM_fit:
+                for i in range(self.XY1DfitComp[('X', 'x')].shape[0]):
+                    ax[0, 0].plot(self.XY1DfitComp[('X', 'x')][i, :], self.XY1DfitComp[('X', 'y')][i, :], color=colors[i], linestyle='--')
+                    ax[1, 1].plot(self.XY1DfitComp[('Y', 'y')][i, :], self.XY1DfitComp[('Y', 'x')][i, :], color=colors[i], linestyle='--')
+                ax[0, 0].plot(self.XY1DfitSum[('X', 'x')], self.XY1DfitSum[('X', 'y')], color='black')
+                ax[1, 1].plot(self.XY1DfitSum[('Y', 'y')], self.XY1DfitSum[('Y', 'x')], color='black')
+
+            if label:
+                ax[1, 0].text(self.limits['x'][0] + np.diff(self.limits['y']) / 10, self.limits['y'][1] - np.diff(self.limits['y']) / 10, label, horizontalalignment='left')
+
+            if PAMtools_fit and 'X' in self.XY1DfitParam_PAMtools:
+                n = len(self.XY1DfitParam_PAMtools['X']['mu'])
+                if n > 1:
+                    for i in range(n):
+                        ax[0, 0].plot(self.XY1DfitSum_PAMtools[('X', 'x')], self.XY1DfitComp_PAMtools[('X', 'y', i)], ':', color=colors[i], linewidth=1.5)
+                ax[0, 0].plot(self.XY1DfitSum_PAMtools[('X', 'x')], self.XY1DfitSum_PAMtools[('X', 'y')], color='black')
+
+            if PAMtools_fit and 'Y' in self.XY1DfitParam_PAMtools:
+                m = len(self.XY1DfitParam_PAMtools['Y']['mu'])
+                if m > 1:
+                    for i in range(m):
+                        ax[0, 0].plot(self.XY1DfitComp_PAMtools[('Y', 'y')], self.XY1DfitSum_PAMtools[('Y', 'x', i)], ':', color=colors[i], linewidth=1.5)
+                ax[1, 1].plot(self.XY1DfitSum_PAMtools[('Y', 'y')], self.XY1DfitSum_PAMtools[('Y', 'x')], color='black')
 
             ax[0, 1].set_axis_off()
             ax[0, 0].set_axis_off()
@@ -128,6 +188,163 @@ class Hist2d():
             ax[1, 1].set_ylim(self.limits['y'])
             ax[1, 0].set_xlabel(axis_labels[0])
             ax[1, 0].set_ylabel(axis_labels[1])
+
+    def fit_histogram(self, axis, mu0=[0.5], sigma0=[0.1], mu_bounds=(0, np.inf), sigma_bounds=(0, np.inf), verbose=True):
+        """
+        Wrapper for the curve_fit function of the scipy.optimize module
+        The curve_fit optimizes the Gaussian parameters (mu, sigma)
+        while the nnls optimizes the relative weights of the Gaussians.
+
+        Parameters
+        ----------
+        fun : callable
+              The model function f(x,...) taking x values as a first argument followed by the function parameters
+        axis : int
+               Axis to fit (0: x-axis, 1: y-axis)
+        mu0 : array_like
+             start values for the Gaussian center
+        sigma0 : array_like
+                 start values for the standard deviation of the Gaussians
+        mu_bounds : 2-tuple of float or 2-tuple of array_like, optional
+                 lower and upper bounds for each parameter in mu0. Can be either a tuple of two scalars
+                 (same bound for all parameters) or a tuple of array_like with the same length as mu0.
+                 To deactivate parameter bounds set: `bounds=(-np.inf, np.inf)`
+        sigma_bounds : 2-tuple of float or 2-tuple of array_like, optional
+                 lower and upper bounds for each parameter in sigma0. See also mu_bounds
+        """
+        if axis == 0:
+            a = 'X'
+        else:
+            a = 'Y'
+        p0 = []
+        gauss_bounds = ([], [])
+        for i, (m, s) in enumerate(zip(mu0, sigma0)):
+            p0.append(m)
+            p0.append(s)
+            if np.isscalar(mu_bounds[0]):
+                mbl = mu_bounds[0]
+            else:
+                mbl = mu_bounds[0][i]
+
+            if np.isscalar(mu_bounds[1]):
+                mbu = mu_bounds[1]
+            else:
+                mbu = mu_bounds[1][i]
+
+            if np.isscalar(sigma_bounds[0]):
+                sbl = sigma_bounds[0]
+            else:
+                sbl = sigma_bounds[0][i]
+
+            if np.isscalar(sigma_bounds[1]):
+                sbu = sigma_bounds[1]
+            else:
+                sbu = sigma_bounds[1][i]
+
+            gauss_bounds[0].append(mbl)
+            gauss_bounds[0].append(sbl)
+            gauss_bounds[1].append(mbu)
+            gauss_bounds[1].append(sbu)
+
+        self._y_data = self.XY1D[a, 'y']
+        p, p_std = fit(self._model_func, self.XY1D[a, 'x'], self.XY1D[a, 'y'], p0, bounds=gauss_bounds)
+        A, x, y = self.nnls_convol_irfexp(self.XY1D[a, 'x'], p)
+        self.XY1DfitParam_PAMtools[a] = {'ampl': x / sum(x), 'mu': p[0::2], 'sigma': p[1::2]}
+        self.XY1DfitParamStd_PAMtools[a] = {'mu': p_std[0::2], 'sigma': p_std[1::2]}
+        self.XY1DfitSum_PAMtools[a, 'x'] = np.linspace(self.XY1D[a, 'x'][0], self.XY1D[a, 'x'][-1], 200)
+        A_fit = self.prepare_gaussians(self.XY1DfitSum_PAMtools[a, 'x'], p)
+        for i in range(len(x)):
+            self.XY1DfitComp_PAMtools[a, 'y', i] = np.dot(A_fit[:, i], x[i])
+        self.XY1DfitSum_PAMtools[a, 'y'] = np.dot(A_fit, np.array(x))
+
+    @staticmethod
+    def gauss(x_data, mu, sigma):
+        """
+        Calculate a Gaussian-shaped instrument response function (IRF)
+
+        Parameters
+        ----------
+        x_data : array_like
+                 array of the independent variable
+        mu : float
+             mean of the Gaussian distribution
+        sigma : float, optional
+                standard deviation of the Gaussian distribution
+        A : float, optional
+            amplitude of the Gaussian distribution
+
+        Returns
+        -------
+        irf : ndarray
+              Gaussian shaped instrument response function (IRF)
+        """
+        gaussian = np.exp(-(x_data - mu)**2 / (2 * sigma**2)).T
+        return gaussian
+
+    def prepare_gaussians(self, x_data, p0):
+        gaussians = []
+        for k in range(0, len(p0), 2):
+            gaussians.append(self.gauss(x_data, *p0[k:k + 2]))
+            A = np.array(gaussians).T
+        return A
+
+    def nnls_convol_irfexp(self, x_data, p0):
+        """
+        Solve non-negative least squares for series of IRF-convolved single-exponential decays.
+        First, the IRF is shifted, then convolved with each exponential decay individually (decays 1,...,n),
+        merged into an m x n array (=A) and finally plugged into scipy.optimize.nnls(A, experimental y-data) to which
+        compute `argmin_x || Ax - y ||_2`.
+
+        Parameters
+        ----------
+        x_data : array_like
+                 array of the independent variable
+        p0 : array_like
+             start values for the fit model
+
+        Returns
+        -------
+        A : ndarray
+            matrix containing irf-convoluted single-exponential decays in the first n columns
+            and ones in the last column (background counts)
+        x : ndarray
+            vector that minimizes `|| Ax - y ||_2`
+        y : ndarray
+            fit vector computed as `y = Ax`
+
+        """
+        A = self.prepare_gaussians(x_data, p0)
+        x, rnorm = scipy.optimize.nnls(A, self._y_data)
+        y = np.dot(A, np.array(x))
+        return A, x, y
+
+    def _model_func(self, x_data, *p0):
+        """
+        Wrapper function for nnls_irfshift_convol
+
+        Parameters
+        ----------
+        x_data : array_like
+                 array of the independent variable
+        p0 : array_like
+             start values for the fit model
+
+        See also
+        --------
+        nnls_convol_irfexp : Calculate non-linear least squares of IRF-convolved single-exponential decays
+
+        Returns
+        -------
+        y : ndarray
+            fit vector computed as `y = Ax`
+        """
+        A, x, y = self.nnls_convol_irfexp(x_data, p0)
+        return y
+
+    def read_fit(self, filename):
+        """
+        """
+        self.XY1DfitParam = pd.read_csv(filename, header=2, sep='\t')
 
     @classmethod
     def fromfile(cls, filename):
