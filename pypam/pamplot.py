@@ -19,7 +19,8 @@ sns.set(font='Arial')
 #cols = [[0.31, 0.45, 0.56], [0.6, 0.6, 0.6], [0.75, 0.51, 0.38]]
 cols = [[0.1, 0.1, 0.1], [0.9, 0.9, 0.9]]
 cmap_list, cmap_linseg = ncp.make_colormap(cols, 'grayscale')
-colors = ncp.get_colors(cmap_linseg, 5, scramble=True)
+#colors = ncp.get_colors(cmap_linseg, 5, scramble=True)
+colors = ncp.get_colors(cmap_linseg, 5)
 
 
 def set_ticksStyle(x_size=4, y_size=4, x_dir='in', y_dir='in'):
