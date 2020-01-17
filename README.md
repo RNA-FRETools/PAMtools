@@ -10,7 +10,7 @@ PAMtools is a set of helper functions written in Matlab and Python to export and
 Download and install
 --------------------
 
-Clone or [download](https://github.com/fdsteffen/Lifefit/archive/master.zip) PAMtools into a directory of your choice.
+Clone or [download](https://github.com/fdsteffen/PAMtools/archive/master.zip) PAMtools into a directory of your choice.
 ```
 git clone https://github.com/fdsteffen/PAMtools.git
 ```
@@ -42,4 +42,4 @@ Dependencies
 Getting started
 ---------------
 
-For an introduction into the functionality of PyPAM visit the [tutorial](tutorial/pamtools_tutorial). The Jupyter Notebook can be downloaded [here](tutorial/pamtools_tutorial.ipynb).
+For an introduction into the functionality of PyPAM visit the [tutorial](docs/source/tutorial/pamtools_tutorial). The Jupyter Notebook can be downloaded [here](docs/source/tutorial/pamtools_tutorial.ipynb).
