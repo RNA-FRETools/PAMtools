@@ -1,10 +1,8 @@
-
 |logo| PAMtools   
 ===============
 
 .. |logo| image:: _static/PAMtools_logo.png
    :width: 50
-
 
 What is PAMtools
 ----------------
