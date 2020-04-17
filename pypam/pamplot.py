@@ -63,7 +63,7 @@ def fit(fun, x_data, y_data, p0, bounds=(-np.inf, np.inf)):
 
 class Hist2d:
 
-    def __init__(self, data):
+    def __init__(self, data, verbose=False):
         """
         2D histogram class
 
@@ -84,6 +84,14 @@ class Hist2d:
         self.XY1DfitParamStd_PAMtools = {}
         self.XY1DfitSum_PAMtools = {}
         self.XY1DfitComp_PAMtools = {}
+        self.parameters = {}
+        additional_parameters = ['photons_per_window', 'crosstalk', 'direct_excitation', 'gamma_factor']
+        for p in additional_parameters:
+            try:
+                self.parameters[p] = data[p]
+            except KeyError:
+                if verbose:
+                    print('\"{}\" is not specified.'.format(p))
         for i in ['x', 'y', 'z']:
             self.contour[i] = np.array(data['contour'][i]) if data['contour'][i] is not None else None
             self.image[i] = np.array(data['image'][i]) if data['image'][i] is not None else None
@@ -102,6 +110,9 @@ class Hist2d:
 
         if self.hex['x'] is not None:
             self.hex['patches'] = self.makeHex()
+
+        self.sigma_shotnoise()
+
 
     def makeHex(self):
         """
@@ -190,6 +201,22 @@ class Hist2d:
             ax[1, 1].set_ylim(self.limits['y'])
             ax[1, 0].set_xlabel(axis_labels[0])
             ax[1, 0].set_ylabel(axis_labels[1])
+        return f, ax
+
+    def plot_BVA(self, x_axis, x_axis_label=None, style='contour', cmap='RdGy_r', imgOffset=0, PAM_fit=False, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], linecolor='black'):
+        """
+        x_axis : str
+                 ('FRET', 'PR')
+        x_axis_label : str
+        """
+        if x_axis_label is None:
+            x_axis_label = x_axis
+        f, ax = self.plot2Dhist(style=style, axis_labels=(x_axis_label, 'BVA st.dev.'), cmap=cmap, imgOffset=imgOffset, PAM_fit=PAM_fit, PAMtools_fit=PAMtools_fit, label=label, hist_color=hist_color)
+        try: 
+            ax[1, 0].plot(self.BVA[x_axis], self.BVA['sigma'], color=linecolor)
+        except ValueError:
+            print('Parameters are missing. Line from BVA can not be drawn.')
+
 
     def fit_histogram(self, axis, mu0=[0.5], sigma0=[0.1], mu_bounds=(0, np.inf), sigma_bounds=(0, np.inf), verbose=True, fit_function='gaussian'):
         """
@@ -380,13 +407,54 @@ class Hist2d:
         A, x, y = self.nnls_convol_irfexp(x_data, p0)
         return y
 
+    def PR2FRET(self, proximity_ratio, verbose=False):
+        """
+        Convert proximity ratio into absolute FRET efficiency
+
+        Parameters
+        ----------
+        proximity_ratio : array_like
+        alpha : float
+                donor-acceptor spectral crosstalk (percentage of donor emission into acceptor detection channel)
+        gamma : float
+                difference in quantum yield and detection efficieny of donor and acceptor
+        delta : float
+                percentage of direct acceptor excitation by the green laser
+
+        Returns
+        -------
+        FRET : array_like
+        
+        Reference
+        ---------
+        """
+        try:
+            FRET = (1-(1+self.parameters['crosstalk']+self.parameters['direct_excitation'])*(1-proximity_ratio))/(1-(1+self.parameters['crosstalk']-self.parameters['gamma_factor'])*(1-proximity_ratio))
+        except KeyError:
+            FRET = None
+            if verbose:
+                print('Parameter \"crosstalk\", \"direct_excitation\" or \"gamma_factor\" is missing.')
+        return FRET
+
+
+    def sigma_shotnoise(self, verbose=False):
+        self.BVA = {}
+        self.BVA['PR'] = np.linspace(0,1,1000)
+        self.BVA['FRET']  = self.PR2FRET(self.BVA['PR'])
+        try:
+            self.BVA['sigma'] = np.sqrt(self.BVA['PR']*(1-self.BVA['PR'])/self.parameters['photons_per_window'])
+        except KeyError:
+            self.BVA['sigma'] = None
+            if verbose:
+                print('Parameter \"photons_per_window\" is missing. Expected proximity ratio variance can not be calculated.')
+
     def read_fit(self, filename):
         """
         """
         self.XY1DfitParam = pd.read_csv(filename, header=2, sep='\t')
 
     @classmethod
-    def fromfile(cls, filename):
+    def fromfile(cls, filename, verbose=False):
         """
         Alternative constructor for the pamplot.Hist2d class
 
@@ -396,4 +464,4 @@ class Hist2d:
         """
         with open(filename) as f:
             data = json.load(f)
-        return cls(data)
+        return cls(data, verbose)

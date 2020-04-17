@@ -1,6 +1,19 @@
 % Extract 2D histogram drawn in PAM and exported to a Matlab figure
 
-function extract_2Dplot
+% Specify any additional dictionary elements to be included in the json
+% output file as name-value pairs. 
+% 
+% Currently implemented names are:
+% - photons_per_window (int)
+% - crosstalk (float)
+% - direct_excitation (float)
+% - gamma_factor (float)
+%
+% Example: extract_2Dplot('photons_per_window', 5, 'direct_excitation', 0.046, ... 
+%                         'crosstalk', 0.11, 'gamma_factor', 0.89)
+%
+
+function extract_2Dplot(varargin)
 
 fig = gcf;
 axObjs = fig.Children;
@@ -122,6 +135,21 @@ for i = 1:length(dataObjs)
          
     end
 end
+
+p = inputParser;
+default_photons_per_window = nan;
+addParameter(p,'photons_per_window',default_photons_per_window,@(x) assert(isnumeric(x) && isscalar(x) && mod(x,1) == 0 && x>0, 'Value must be a positive integer'));
+addParameter(p,'gamma_factor',default_photons_per_window,@(x) assert(isnumeric(x) && isscalar(x) && x>0, 'Value must be a positive float'));
+addParameter(p,'crosstalk',default_photons_per_window,@(x) assert(isnumeric(x) && isscalar(x) && x>0, 'Value must be a positive float'));
+addParameter(p,'direct_excitation',default_photons_per_window,@(x) assert(isnumeric(x) && isscalar(x) && x>0, 'Value must be a positive float'));
+
+parse(p,varargin{:});
+f = fieldnames(p.Results);
+for i = 1:length(f)
+    if ~isnan(p.Results.(f{i}))
+        data.(f{i}) = p.Results.(f{i});
+    end
+end 
 
 % save file
 [file, path] = uiputfile('*.json', 'Save JSON file', 'data.json');
