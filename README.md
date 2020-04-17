@@ -42,4 +42,4 @@ Dependencies
 Getting started
 ---------------
 
-For an introduction into the functionality of PyPAM visit the [tutorial](docs/source/tutorial/pamtools_tutorial). The Jupyter Notebook can be downloaded [here](docs/source/tutorial/pamtools_tutorial.ipynb).
+For an introduction into the functionality of PyPAM visit the [tutorial](docs/source/tutorial/pamtools_tutorial.ipynb).

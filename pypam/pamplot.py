@@ -5,7 +5,8 @@ import json
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import scipy
+import scipy.optimize
+import scipy.special
 import pandas as pd
 from matplotlib.patches import Circle, Wedge, Polygon
 from matplotlib.collections import PatchCollection
@@ -60,7 +61,7 @@ def fit(fun, x_data, y_data, p0, bounds=(-np.inf, np.inf)):
     return p, p_std
 
 
-class Hist2d():
+class Hist2d:
 
     def __init__(self, data):
         """
@@ -190,7 +191,7 @@ class Hist2d():
             ax[1, 0].set_xlabel(axis_labels[0])
             ax[1, 0].set_ylabel(axis_labels[1])
 
-    def fit_histogram(self, axis, mu0=[0.5], sigma0=[0.1], mu_bounds=(0, np.inf), sigma_bounds=(0, np.inf), verbose=True):
+    def fit_histogram(self, axis, mu0=[0.5], sigma0=[0.1], mu_bounds=(0, np.inf), sigma_bounds=(0, np.inf), verbose=True, fit_function='gaussian'):
         """
         Wrapper for the curve_fit function of the scipy.optimize module
         The curve_fit optimizes the Gaussian parameters (mu, sigma)
@@ -247,13 +248,22 @@ class Hist2d():
             gauss_bounds[1].append(mbu)
             gauss_bounds[1].append(sbu)
 
-        self._y_data = self.XY1D[a, 'y']
-        p, p_std = fit(self._model_func, self.XY1D[a, 'x'], self.XY1D[a, 'y'], p0, bounds=gauss_bounds)
-        A, x, y = self.nnls_convol_irfexp(self.XY1D[a, 'x'], p)
+
+        if fit_function == 'beta':
+            y_data = self.XY1D[a, 'y'][(self.XY1D[a, 'x']>0) & (self.XY1D[a, 'x']<1)]
+            x_data = self.XY1D[a, 'x'][(self.XY1D[a, 'x']>0) & (self.XY1D[a, 'x']<1)]
+        else:
+            y_data = self.XY1D[a, 'y']
+            x_data = self.XY1D[a, 'x']
+
+        self._fitfunction = fit_function
+        self._y_data = y_data
+        p, p_std = fit(self._model_func, x_data, y_data, p0, bounds=gauss_bounds)
+        A, x, y = self.nnls_convol_irfexp(x_data, p)
         self.XY1DfitParam_PAMtools[a] = {'ampl': x / sum(x), 'mu': p[0::2], 'sigma': p[1::2]}
         self.XY1DfitParamStd_PAMtools[a] = {'mu': p_std[0::2], 'sigma': p_std[1::2]}
-        self.XY1DfitSum_PAMtools[a, 'x'] = np.linspace(self.XY1D[a, 'x'][0], self.XY1D[a, 'x'][-1], 200)
-        A_fit = self.prepare_gaussians(self.XY1DfitSum_PAMtools[a, 'x'], p)
+        self.XY1DfitSum_PAMtools[a, 'x'] = np.linspace(x_data[0], x_data[-1], 200)
+        A_fit = self.prepare_distributions(self.XY1DfitSum_PAMtools[a, 'x'], p)
         for i in range(len(x)):
             self.XY1DfitComp_PAMtools[a, 'y', i] = np.dot(A_fit[:, i], x[i])
         self.XY1DfitSum_PAMtools[a, 'y'] = np.dot(A_fit, np.array(x))
@@ -261,7 +271,7 @@ class Hist2d():
     @staticmethod
     def gauss(x_data, mu, sigma):
         """
-        Calculate a Gaussian-shaped instrument response function (IRF)
+        Calculate a Gaussian PDF
 
         Parameters
         ----------
@@ -271,22 +281,50 @@ class Hist2d():
              mean of the Gaussian distribution
         sigma : float, optional
                 standard deviation of the Gaussian distribution
-        A : float, optional
-            amplitude of the Gaussian distribution
 
         Returns
         -------
-        irf : ndarray
-              Gaussian shaped instrument response function (IRF)
+        gaussian : ndarray
         """
-        gaussian = np.exp(-(x_data - mu)**2 / (2 * sigma**2)).T
+        gaussian = 1/(sigma*np.sqrt(2*np.pi))*np.exp(-(x_data - mu)**2 / (2 * sigma**2)).T
         return gaussian
 
-    def prepare_gaussians(self, x_data, p0):
-        gaussians = []
+    @staticmethod
+    def beta(x_data, mu, sigma):
+        """
+        Calculate a beta PDF
+
+        Parameters
+        ----------
+        x_data : array_like
+                 array of the independent variable
+        mu : float
+             mean of the beta distribution
+        sigma : float, optional
+                standard deviation of the beta distribution
+
+        Returns
+        -------
+        beta : ndarray
+
+        References
+        ----------
+        Gopich and Szabo, Theory of Single-Molecule FRET Efficiency Histograms, Wiley (2011)
+
+        """
+        A = mu**2*(1-mu)/sigma**2-mu
+        D = mu*(1-mu)**2/sigma**2-1+mu
+        beta = scipy.special.gamma(A+D)/(scipy.special.gamma(A)*scipy.special.gamma(D))*x_data**(A-1)*(1-x_data)**(D-1)
+        return beta
+
+    def prepare_distributions(self, x_data, p0):
+        distributions = []
         for k in range(0, len(p0), 2):
-            gaussians.append(self.gauss(x_data, *p0[k:k + 2]))
-            A = np.array(gaussians).T
+            if self._fitfunction == 'beta':
+                distributions.append(self.beta(x_data, *p0[k:k + 2]))
+            else:
+                distributions.append(self.gauss(x_data, *p0[k:k + 2]))
+            A = np.array(distributions).T
         return A
 
     def nnls_convol_irfexp(self, x_data, p0):
@@ -314,7 +352,7 @@ class Hist2d():
             fit vector computed as `y = Ax`
 
         """
-        A = self.prepare_gaussians(x_data, p0)
+        A = self.prepare_distributions(x_data, p0)
         x, rnorm = scipy.optimize.nnls(A, self._y_data)
         y = np.dot(A, np.array(x))
         return A, x, y
