@@ -22,6 +22,7 @@ cols = [[0.1, 0.1, 0.1], [0.9, 0.9, 0.9]]
 cmap_list, cmap_linseg = ncp.make_colormap(cols, 'grayscale')
 #colors = ncp.get_colors(cmap_linseg, 5, scramble=True)
 colors = ncp.get_colors(cmap_linseg, 5)
+bwo = ncp.get_cmap('bluewhiteorange')
 
 
 def set_ticksStyle(x_size=4, y_size=4, x_dir='in', y_dir='in'):
@@ -127,7 +128,7 @@ class Hist2d:
             patches.append(Polygon(np.vstack((self.hex['x'][:, i], self.hex['y'][:, i])).T))
         return patches
 
-    def plot2Dhist(self, style='contour', axis_labels=('FRET', 'Stoichiometry'), cmap='Blues_r', imgOffset=0, PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7]):
+    def plot2Dhist(self, style='contour', axis_labels=('FRET', 'Stoichiometry'), cmap='RdGy_r', imgOffset=0, PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7]):
         """
         Display a 2D contour / image / hex or scatter plot
 
@@ -201,19 +202,32 @@ class Hist2d:
             ax[1, 1].set_ylim(self.limits['y'])
             ax[1, 0].set_xlabel(axis_labels[0])
             ax[1, 0].set_ylabel(axis_labels[1])
-        return f, ax
+        self.ax = ax
 
-    def plot_BVA(self, x_axis, x_axis_label=None, style='contour', cmap='RdGy_r', imgOffset=0, PAM_fit=False, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], linecolor='black'):
+    def plot_BVA(self, x_axis, x_axis_label=None, style='contour', cmap='RdGy_r', imgOffset=0, PAM_fit=False, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], line_color='black'):
         """
+        Display a 2D contour / image / hex or scatter plot of the Burst Variance Analysis
+
         x_axis : str
-                 ('FRET', 'PR')
+                 display FRET or proximity ratio on the x-axis('FRET', 'PR')
         x_axis_label : str
+        style : str (optional)
+                style of the plot ('contour', 'image', 'hex', 'scatter'). Default='contour'
+        cmap : colormap or str
+               colormap object or name of a registered colormap
+        imgOffset : int (optional)
+                    Lower clipping offset (in %) for image plots
+        PAM_fit : bool (default=False)
+        PAMtools_fit : bool (default=False)
+        label : str
+        hist_color : rgb array or str
+        line_color : rgb array or str
         """
         if x_axis_label is None:
             x_axis_label = x_axis
-        f, ax = self.plot2Dhist(style=style, axis_labels=(x_axis_label, 'BVA st.dev.'), cmap=cmap, imgOffset=imgOffset, PAM_fit=PAM_fit, PAMtools_fit=PAMtools_fit, label=label, hist_color=hist_color)
+        self.plot2Dhist(style=style, axis_labels=(x_axis_label, 'BVA st.dev.'), cmap=cmap, imgOffset=imgOffset, PAM_fit=PAM_fit, PAMtools_fit=PAMtools_fit, label=label, hist_color=hist_color)
         try: 
-            ax[1, 0].plot(self.BVA[x_axis], self.BVA['sigma'], color=linecolor)
+            self.ax[1, 0].plot(self.BVA[x_axis], self.BVA['sigma'], color=line_color)
         except ValueError:
             print('Parameters are missing. Line from BVA can not be drawn.')
 
@@ -438,6 +452,9 @@ class Hist2d:
 
 
     def sigma_shotnoise(self, verbose=False):
+        """
+        Calculate shot noise limit from Burst Variance Analysis (BVA)
+        """
         self.BVA = {}
         self.BVA['PR'] = np.linspace(0,1,1000)
         self.BVA['FRET']  = self.PR2FRET(self.BVA['PR'])
@@ -450,6 +467,11 @@ class Hist2d:
 
     def read_fit(self, filename):
         """
+        Read PAM fit results from file
+
+        Parameters
+        ----------
+        filename : str
         """
         self.XY1DfitParam = pd.read_csv(filename, header=2, sep='\t')
 
@@ -465,3 +487,155 @@ class Hist2d:
         with open(filename) as f:
             data = json.load(f)
         return cls(data, verbose)
+
+class FCS:
+
+    def __init__(self, data, parameters, verbose=False):
+        """
+        FCS class
+
+        Attributes
+        ----------
+        data : pandas.DataFrame
+               Dataframe with columns ['time', 'data', 'error', 'fit', 'res']
+        """
+        self.data = data
+        self.parameters = parameters
+
+    @classmethod
+    def fromfile(cls, filename, verbose=False):
+        """
+        Alternative constructor for the pamplot.FCS class
+
+        Parameters
+        ---------
+        filename : str
+        verbose : boolean
+        """
+        data = pd.read_csv(filename, sep='\t')
+        parameters = pd.read_csv('{}_param.txt'.format(filename.split('.', 1)[0]), sep='\t', header=2).iloc[0]
+        if np.isnan(parameters['y0']):
+            parameters['y0'] = 0
+        return cls(data, parameters, verbose)
+
+    def plotFCS(self, color=ncp.get_colors(bwo, 1), time_limits=(10**-7, 0.1), legend_strings=None, normalization='None', normalization_time=10**-6):
+        """
+        Plot FCS curve
+
+        Parameters
+        ----------
+        color : array_like 
+                colors of FCS curve
+        time_limits : tuple
+        legend_strings : list of str
+        normalization : str
+                        normalization method {'None', 'G0', 'time'} (default='None')
+                        G0 normalizes to fit
+                        time normalzes to time point closest to reference time point given in normalization_time
+        normalization_time : float
+                             reference time point for normalization method 'time'
+        """
+        plotFCS([self], color_list=color, time_limits=time_limits, legend_strings=legend_strings, normalization=normalization)
+
+
+
+
+def plotFCS(fcs_list, color_list=None, time_limits=(10**-7, 0.1), legend_strings=None, normalization='None', normalization_time=10**-6):
+    """
+    Plot FCS curve
+
+    Parameters
+    ----------
+    fcs_list : list of pp.pamplot.FCS class
+    color_list : array_like 
+                 colors of FCS curves
+    time_limits : tuple
+                  time limits in seconds
+    legend_strings : list of str
+    normalization : str
+                    normalization method {'None', 'G0', 'time'} (default='None')
+                    G0 normalizes to fit
+                    time normalzes to time point closest to reference time point given in normalization_time
+    normalization_time : float
+                         reference time point for normalization method 'time'
+    """
+
+    if color_list is None:
+        color_list = ncp.get_colors(bwo, len(fcs_list))
+
+    with sns.axes_style('ticks'):
+        set_ticksStyle()
+        f, ax = plt.subplots(nrows=1, ncols=1, figsize=(2.25, 2), sharex=True, sharey=True, squeeze=False)
+        for i,fcs in enumerate(fcs_list):
+            time = fcs.data.loc[(fcs.data['time']>time_limits[0]) & (fcs.data['time']<time_limits[1]), 'time']
+            data = fcs.data.loc[(fcs.data['time']>time_limits[0]) & (fcs.data['time']<time_limits[1]), 'data']
+            fit = fcs.data.loc[(fcs.data['time']>time_limits[0]) & (fcs.data['time']<time_limits[1]), 'fit']
+            if normalization == 'G0':
+                first = fit.iloc[0]
+                data = (data-fcs.parameters['y0'])/first
+                fit = (fit-fcs.parameters['y0'])/first
+                ax[0,0].set_ylabel('norm. G($\\tau$)')
+            elif normalization == 'time':
+                first = data.iloc[np.argmin(abs(time-normalization_time))]
+                data = (data-fcs.parameters['y0'])/first
+                fit = (fit-fcs.parameters['y0'])/first
+                ax[0,0].set_ylabel('norm. G($\\tau$)')
+            else:
+                ax[0,0].set_ylabel('G($\\tau$)')
+            ax[0,0].semilogx(time, data, '.', color=color_list[i])
+            ax[0,0].semilogx(time, fit, '-', color='k')
+        
+        ax[0,0].set_xlabel('lag time $\\tau$ (s)')
+        ax[0,0].set_xlim(time_limits)
+        if legend_strings is not None:
+            ax[0,0].legend(legend_strings, frameon=False)
+
+
+class Timetrace:
+    """
+    FCS class
+
+    Attributes
+    ----------
+    data : dict
+           dictionary with keys ['time', 'counts']
+    """
+    def __init__(self, GG, GR, verbose=False):
+        self.GG = pd.DataFrame(GG)
+        self.GR =  pd.DataFrame(GR)
+
+    @classmethod
+    def fromfiles(cls, filename_GG, filename_GR, verbose=False):
+        """
+        Alternative constructor for the pamplot.Hist2d class
+
+        Parameters
+        ---------
+        filename : list of str
+        """
+        with open(filename_GG) as f:
+            GG = json.load(f)
+        with open(filename_GR) as f:
+            GR = json.load(f)
+        return cls(GG, GR, verbose)
+
+
+    def plotTrace(self, time_limits=[0,1]):
+        """
+        Plot time trace
+
+        Parameters
+        ----------
+        time_limits : tuple
+                      time limits in seconds
+        """
+        with sns.axes_style('ticks'):
+            set_ticksStyle()
+            colors = [[0.21, 0.59, 0.32], [0.75, 0.25, 0.16]]
+            f, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 2), sharex=False, sharey=False, squeeze=False)
+            ax[0,0].plot(self.GG.loc[(self.GG['time']>time_limits[0]) & (self.GG['time']<time_limits[1]), 'time'], self.GG.loc[(self.GG['time']>time_limits[0]) & (self.GG['time']<time_limits[1]), 'counts'], color=colors[0])
+            ax[0,0].plot(self.GR.loc[(self.GR['time']>time_limits[0]) & (self.GR['time']<time_limits[1]), 'time'], -self.GR.loc[(self.GR['time']>time_limits[0]) & (self.GR['time']<time_limits[1]), 'counts'], color=colors[1])
+            ax[0,0].set_ylabel('counts')
+            ax[0,0].set_xlabel('time (s)')
+            ax[0,0].set_xlim(time_limits)
+            ax[0,0].set_ylim(-44,44)
