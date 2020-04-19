@@ -18,17 +18,23 @@ fitmodels.FCS_D_2trip_nogamma = FCS_D_2trip_nogamma;
 model_function_input = strrep(char(FCS.Model),'@(P,x)','');
 n_models = numel(fieldnames(fitmodels));
 model_names = fieldnames(fitmodels);
+model_found = 0;
 for i = 1:n_models
     model_name_sele = model_names{i};
     model_function_sele = fitmodels.(model_names{i}).func;
     model_parameters_sele = fitmodels.(model_names{i}).parameters;
     if strcmp(model_function_sele, model_function_input)
         fprintf('-> model found!\n')
+        model_found = 1;
         break
     end
+end
+if ~model_found
     fprintf('-> model does not exist\n');
     return
 end
+    
+
     
 % rewrite model with parameters
 model_var_sele = model_function_input;
