@@ -177,7 +177,7 @@ class Hist2d:
                 ax[1, 1].plot(self.XY1DfitSum[('Y', 'y')], self.XY1DfitSum[('Y', 'x')], color='black')
 
             if label:
-                ax[1, 0].text(self.limits['x'][0] + np.diff(self.limits['y']) / 10, self.limits['y'][1] - np.diff(self.limits['y']) / 10, label, horizontalalignment='left')
+                ax[1, 0].text(self.limits['x'][0] + np.diff(self.limits['x']) / 10, self.limits['y'][1] - np.diff(self.limits['y']) / 7, label, horizontalalignment='left')
 
             if PAMtools_fit and 'X' in self.XY1DfitParam_PAMtools:
                 n = len(self.XY1DfitParam_PAMtools['X']['mu'])
@@ -501,6 +501,13 @@ class FCS:
         """
         self.data = data
         self.parameters = parameters
+        try:
+            self.calcBrightness()
+        except KeyError:
+            if verbose:
+                print('\"average counts\" (kHz) is not present in parameter file.')
+        self.calcConcentration()
+        self.parameters['Rh_298K'] = self.hydrodynamic_radius(parameters['D'])
 
     @classmethod
     def fromfile(cls, filename, verbose=False):
@@ -513,10 +520,40 @@ class FCS:
         verbose : boolean
         """
         data = pd.read_csv(filename, sep='\t')
-        parameters = pd.read_csv('{}_param.txt'.format(filename.split('.', 1)[0]), sep='\t', header=2).iloc[0]
+        parameters = pd.read_csv('{}_param.txt'.format(filename[:-4]), sep='\t', header=2).iloc[0]
         if np.isnan(parameters['y0']):
             parameters['y0'] = 0
         return cls(data, parameters, verbose)
+
+    @staticmethod
+    def hydrodynamic_radius(D, T=298.15, eta=8.9*10**-4):
+        """
+        Calculate the hydrodnamic radius in nanometer
+
+        Parameters
+        ----------
+        T : float
+            temperature in Kelvin   
+        eta : float
+              viscosity of the solvent in Pa*s
+        """
+        return 1.38*10**-23*T/(6*np.pi*eta*D*10**-12)*10**9
+
+    def calcConcentration(self):
+        """
+        Calculate the concentration in nanomolar
+        """
+        V_eff = np.pi**(3/2)*self.parameters['w_xy']**2*self.parameters['w_z']*10**-15
+        N_A = 6.022*10**23
+        self.parameters['c'] = self.parameters['N']/(V_eff*N_A*10**-9)
+
+    def calcBrightness(self):
+        """
+        Calculate the molecular brightness in kHz per molecule
+        """
+        self.parameters['B'] = self.parameters['average_counts']/self.parameters['N']
+
+
 
     def plotFCS(self, color=ncp.get_colors(bwo, 1), time_limits=(10**-7, 0.1), legend_strings=None, normalization='None', normalization_time=10**-6):
         """
@@ -620,7 +657,7 @@ class Timetrace:
         return cls(GG, GR, verbose)
 
 
-    def plotTrace(self, time_limits=[0,1]):
+    def plotTrace(self, time_limits=[0,1], count_limits=[-50,50], figsize=(5, 2)):
         """
         Plot time trace
 
@@ -632,10 +669,12 @@ class Timetrace:
         with sns.axes_style('ticks'):
             set_ticksStyle()
             colors = [[0.21, 0.59, 0.32], [0.75, 0.25, 0.16]]
-            f, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 2), sharex=False, sharey=False, squeeze=False)
+            f, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize, sharex=False, sharey=False, squeeze=False)
             ax[0,0].plot(self.GG.loc[(self.GG['time']>time_limits[0]) & (self.GG['time']<time_limits[1]), 'time'], self.GG.loc[(self.GG['time']>time_limits[0]) & (self.GG['time']<time_limits[1]), 'counts'], color=colors[0])
             ax[0,0].plot(self.GR.loc[(self.GR['time']>time_limits[0]) & (self.GR['time']<time_limits[1]), 'time'], -self.GR.loc[(self.GR['time']>time_limits[0]) & (self.GR['time']<time_limits[1]), 'counts'], color=colors[1])
             ax[0,0].set_ylabel('counts')
             ax[0,0].set_xlabel('time (s)')
             ax[0,0].set_xlim(time_limits)
-            ax[0,0].set_ylim(-44,44)
+            ax[0,0].set_ylim(count_limits)
+        self.ax = ax
+        
