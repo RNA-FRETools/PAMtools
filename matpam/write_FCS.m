@@ -1,7 +1,10 @@
 % FCS data from workspace to file
 
+% FCS : struct
+% average_counts : column vector (n x 1 double) => manually copy from table into a column vector [c1;c2;...] on the Matlab command line
+
 % time, data, error, fit line and residuals
-function write_FCS(FCS)
+function write_FCS(FCS, average_counts)
 
 %---------------------------------
 % fitmodel definitions
@@ -59,16 +62,25 @@ for f = 1:size(FCS.Params,1)
         fprintf('-> data and fits written to file %s\n', file)
         
         
-        % fit parameters
+        % fit parameters            
         n = length(model_parameters_sele);
+        if exist('average_counts', 'var')
+            n = n+1;
+        end
         file_param = strrep(file,'.txt','_param.txt');
         fileID = fopen(fullfile(filepath,file_param),'w');
         fprintf(fileID,'# %s\n',model_name_sele);
         fprintf(fileID,'# %s\n',model_var_sele);
         formatSpec = repmat(['%s\t'; '%f\t'], 1,n);
         formatSpec(:,end) = 'n';
-        fprintf(fileID,formatSpec(1,:), model_parameters_sele{:});
-        fprintf(fileID,formatSpec(2,:),FCS.Params(f,:));
+        
+        if exist('average_counts', 'var')
+            fprintf(fileID,formatSpec(1,:), model_parameters_sele{:}, 'average_counts');
+            fprintf(fileID,formatSpec(2,:), FCS.Params(f,:),average_counts(f));
+        else
+            fprintf(fileID,formatSpec(1,:), model_parameters_sele{:});
+            fprintf(fileID,formatSpec(2,:),FCS.Params(f,:));
+        end
         fprintf(fileID,'\n');
         fclose(fileID);
         fprintf('-> model parameters written to file %s\n', file_param)
