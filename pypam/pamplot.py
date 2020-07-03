@@ -86,7 +86,7 @@ class Hist2d:
         self.XY1DfitSum_PAMtools = {}
         self.XY1DfitComp_PAMtools = {}
         self.parameters = {}
-        additional_parameters = ['photons_per_window', 'crosstalk', 'direct_excitation', 'gamma_factor']
+        additional_parameters = ['photons_per_window', 'crosstalk', 'direct_excitation', 'gamma_factor', 'donor_lifetime']
         for p in additional_parameters:
             try:
                 self.parameters[p] = data[p]
@@ -128,7 +128,7 @@ class Hist2d:
             patches.append(Polygon(np.vstack((self.hex['x'][:, i], self.hex['y'][:, i])).T))
         return patches
 
-    def plot2Dhist(self, style='contour', axis_labels=('FRET', 'Stoichiometry'), cmap='RdGy_r', imgOffset=0, PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7]):
+    def plot2Dhist(self, style='contour', axis_labels=('FRET', 'Stoichiometry'), cmap='RdGy_r', imgOffset=0, PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], show_components=True):
         """
         Display a 2D contour / image / hex or scatter plot
 
@@ -181,16 +181,16 @@ class Hist2d:
 
             if PAMtools_fit and 'X' in self.XY1DfitParam_PAMtools:
                 n = len(self.XY1DfitParam_PAMtools['X']['mu'])
-                if n > 1:
+                if n > 1 and show_components:
                     for i in range(n):
                         ax[0, 0].plot(self.XY1DfitSum_PAMtools[('X', 'x')], self.XY1DfitComp_PAMtools[('X', 'y', i)], ':', color=colors[i], linewidth=1.5)
                 ax[0, 0].plot(self.XY1DfitSum_PAMtools[('X', 'x')], self.XY1DfitSum_PAMtools[('X', 'y')], color='black')
 
             if PAMtools_fit and 'Y' in self.XY1DfitParam_PAMtools:
                 m = len(self.XY1DfitParam_PAMtools['Y']['mu'])
-                if m > 1:
+                if m > 1 and show_components:
                     for i in range(m):
-                        ax[0, 0].plot(self.XY1DfitComp_PAMtools[('Y', 'y')], self.XY1DfitSum_PAMtools[('Y', 'x', i)], ':', color=colors[i], linewidth=1.5)
+                        ax[1, 1].plot(self.XY1DfitComp_PAMtools[('Y', 'y', i)], self.XY1DfitSum_PAMtools[('Y', 'x')], ':', color=colors[i], linewidth=1.5)
                 ax[1, 1].plot(self.XY1DfitSum_PAMtools[('Y', 'y')], self.XY1DfitSum_PAMtools[('Y', 'x')], color='black')
 
             ax[0, 1].set_axis_off()
@@ -545,7 +545,8 @@ class FCS:
         """
         V_eff = np.pi**(3/2)*self.parameters['w_xy']**2*self.parameters['w_z']*10**-15
         N_A = 6.022*10**23
-        self.parameters['c'] = self.parameters['N']/(V_eff*N_A*10**-9)
+        self.parameters['c_nM'] = self.parameters['N']/(V_eff*N_A*10**-9)
+        return '{:0.2f nM}'.format(self.parameters['c_nM'])
 
     def calcBrightness(self):
         """
