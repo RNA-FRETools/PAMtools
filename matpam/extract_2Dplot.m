@@ -8,6 +8,7 @@
 % - crosstalk (float)
 % - direct_excitation (float)
 % - gamma_factor (float)
+% - donor_lifetime (float)
 %
 % Example: extract_2Dplot('photons_per_window', 5, 'direct_excitation', 0.046, ... 
 %                         'crosstalk', 0.11, 'gamma_factor', 0.89)
@@ -142,6 +143,7 @@ addParameter(p,'photons_per_window',default_photons_per_window,@(x) assert(isnum
 addParameter(p,'gamma_factor',default_photons_per_window,@(x) assert(isnumeric(x) && isscalar(x) && x>0, 'Value must be a positive float'));
 addParameter(p,'crosstalk',default_photons_per_window,@(x) assert(isnumeric(x) && isscalar(x) && x>0, 'Value must be a positive float'));
 addParameter(p,'direct_excitation',default_photons_per_window,@(x) assert(isnumeric(x) && isscalar(x) && x>0, 'Value must be a positive float'));
+addParameter(p,'donor_lifetime',default_photons_per_window,@(x) assert(isnumeric(x) && isscalar(x) && x>0, 'Value must be a positive float'));
 
 parse(p,varargin{:});
 f = fieldnames(p.Results);
