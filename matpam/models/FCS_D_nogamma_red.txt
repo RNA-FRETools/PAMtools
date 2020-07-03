@@ -6,7 +6,7 @@ One exponential triplet component
 |N|*|Trip amplitude|*|Trip time|*|xy diffusion|*|z diffusion|+|Offset|
 %%%-------------------------PARAMETER DEFINITION------------------------%%%
 Param(1): N             = 1;     LB = 0;   UB = Inf;
-Param(2): D[&mu;m<sup>2</sup>/s]     = 373;   LB = 0;	UB = Inf;   
+Param(2): D[&mu;m<sup>2</sup>/s]     = 300;   LB = 0;	UB = Inf;   
 Param(3): w<sub>r</sub>[&mu;m]       = 0.313;   LB = 0;	UB = Inf;f
 Param(4): w<sub>z</sub>[&mu;m]       = 1.745;	LB = 0;   UB = Inf;f
 Param(5): tauT[&mu;s]      = 1;	LB = 0;   UB = Inf;f
