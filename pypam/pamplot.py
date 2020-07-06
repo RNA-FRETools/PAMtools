@@ -204,6 +204,35 @@ class Hist2d:
             ax[1, 0].set_ylabel(axis_labels[1])
         self.ax = ax
 
+    def plot1DHist(self, axis_labels=('FRET', 'occupancy'), PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], show_components=True):
+        """
+        Display a FRET histogram
+        """
+        with sns.axes_style('ticks'):
+            set_ticksStyle()
+            f, ax = plt.subplots(nrows=1, ncols=1, figsize=(2.5,2), sharex=False, sharey=False, squeeze=False)
+            ax[0, 0].bar(self.XY1D[('X', 'x')], self.XY1D[('X', 'y')], width=self.XY1D[('X', 'x')][1] - self.XY1D[('X', 'x')][0], color=hist_color, linewidth=0)
+
+            if PAM_fit:
+                for i in range(self.XY1DfitComp[('X', 'x')].shape[0]):
+                    ax[0, 0].plot(self.XY1DfitComp[('X', 'x')][i, :], self.XY1DfitComp[('X', 'y')][i, :], color=colors[i], linestyle='--')
+                ax[0, 0].plot(self.XY1DfitSum[('X', 'x')], self.XY1DfitSum[('X', 'y')], color='black')
+
+            if label:
+                ax[1, 0].text(self.limits['x'][0] + np.diff(self.limits['x']) / 10, self.limits['y'][1] - np.diff(self.limits['y']) / 7, label, horizontalalignment='left')
+
+            if PAMtools_fit and 'X' in self.XY1DfitParam_PAMtools:
+                n = len(self.XY1DfitParam_PAMtools['X']['mu'])
+                if n > 1 and show_components:
+                    for i in range(n):
+                        ax[0, 0].plot(self.XY1DfitSum_PAMtools[('X', 'x')], self.XY1DfitComp_PAMtools[('X', 'y', i)], ':', color=colors[i], linewidth=1.5)
+                ax[0, 0].plot(self.XY1DfitSum_PAMtools[('X', 'x')], self.XY1DfitSum_PAMtools[('X', 'y')], color='black')
+
+            ax[0, 0].set_xlim(self.limits['x'])
+            ax[0, 0].set_xlabel(axis_labels[0])
+            ax[0, 0].set_ylabel(axis_labels[1])
+        self.ax = ax
+
     def plot_BVA(self, x_axis, x_axis_label=None, style='contour', cmap='RdGy_r', imgOffset=0, PAM_fit=False, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], line_color='black'):
         """
         Display a 2D contour / image / hex or scatter plot of the Burst Variance Analysis
