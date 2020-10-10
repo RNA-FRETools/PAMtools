@@ -128,7 +128,7 @@ class Hist2d:
             patches.append(Polygon(np.vstack((self.hex['x'][:, i], self.hex['y'][:, i])).T))
         return patches
 
-    def plot2Dhist(self, style='contour', axis_labels=('FRET', 'Stoichiometry'), cmap='RdGy_r', imgOffset=0, PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], show_components=True):
+    def plot2Dhist(self, style='contour', axis_labels=('FRET', 'Stoichiometry'), cmap='RdGy_r', imgOffset=0, PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], show_components=True, edgecolor=None, linewidth=0):
         """
         Display a 2D contour / image / hex or scatter plot
 
@@ -166,8 +166,8 @@ class Hist2d:
                 ax[1, 0].plot(self.scatter['x'], self.scatter['y'], '.', markersize=1, color='black')
             else:
                 ax[1, 0].contourf(self.contour['x'], self.contour['y'], self.contour['z'], levels=self.contour['levels'], cmap=cmap)
-            ax[0, 0].bar(self.XY1D[('X', 'x')], self.XY1D[('X', 'y')], width=self.XY1D[('X', 'x')][1] - self.XY1D[('X', 'x')][0], color=hist_color, linewidth=0)
-            ax[1, 1].barh(self.XY1D[('Y', 'x')], self.XY1D[('Y', 'y')], height=self.XY1D[('Y', 'x')][1] - self.XY1D[('Y', 'x')][0], color=hist_color, linewidth=0)
+            ax[0, 0].bar(self.XY1D[('X', 'x')], self.XY1D[('X', 'y')], width=self.XY1D[('X', 'x')][1] - self.XY1D[('X', 'x')][0], color=hist_color, edgecolor=edgecolor, linewidth=linewidth)
+            ax[1, 1].barh(self.XY1D[('Y', 'x')], self.XY1D[('Y', 'y')], height=self.XY1D[('Y', 'x')][1] - self.XY1D[('Y', 'x')][0], color=hist_color, edgecolor=edgecolor, linewidth=linewidth)
 
             if PAM_fit:
                 for i in range(self.XY1DfitComp[('X', 'x')].shape[0]):
@@ -204,14 +204,14 @@ class Hist2d:
             ax[1, 0].set_ylabel(axis_labels[1])
         self.ax = ax
 
-    def plot1DHist(self, axis_labels=('FRET', 'occupancy'), PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], show_components=True):
+    def plot1Dhist(self, axis_labels=('FRET', 'occupancy'), PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], show_components=True):
         """
         Display a FRET histogram
         """
         with sns.axes_style('ticks'):
             set_ticksStyle()
             f, ax = plt.subplots(nrows=1, ncols=1, figsize=(2.5,2), sharex=False, sharey=False, squeeze=False)
-            ax[0, 0].bar(self.XY1D[('X', 'x')], self.XY1D[('X', 'y')], width=self.XY1D[('X', 'x')][1] - self.XY1D[('X', 'x')][0], color=hist_color, linewidth=0)
+            ax[0, 0].bar(self.XY1D[('X', 'x')], self.XY1D[('X', 'y')], width=(self.XY1D[('X', 'x')][1] - self.XY1D[('X', 'x')][0]), color=hist_color, linewidth=0)
 
             if PAM_fit:
                 for i in range(self.XY1DfitComp[('X', 'x')].shape[0]):
@@ -332,7 +332,8 @@ class Hist2d:
         A, x, y = self.nnls_convol_irfexp(x_data, p)
         self.XY1DfitParam_PAMtools[a] = {'ampl': x / sum(x), 'mu': p[0::2], 'sigma': p[1::2]}
         self.XY1DfitParamStd_PAMtools[a] = {'mu': p_std[0::2], 'sigma': p_std[1::2]}
-        self.XY1DfitSum_PAMtools[a, 'x'] = np.linspace(x_data[0], x_data[-1], 200)
+        halfbinwidth = (x_data[1]-x_data[0])/2
+        self.XY1DfitSum_PAMtools[a, 'x'] = np.linspace(x_data[0]-halfbinwidth, x_data[-1]+halfbinwidth, 200)
         A_fit = self.prepare_distributions(self.XY1DfitSum_PAMtools[a, 'x'], p)
         for i in range(len(x)):
             self.XY1DfitComp_PAMtools[a, 'y', i] = np.dot(A_fit[:, i], x[i])
@@ -536,7 +537,7 @@ class FCS:
             if verbose:
                 print('\"average counts\" (kHz) is not present in parameter file.')
         self.calcConcentration()
-        self.parameters['Rh_298K'] = self.hydrodynamic_radius(parameters['D'])
+        self.parameters['Rh(298K)_nm'] = self.hydrodynamic_radius(parameters['D'])
 
     @classmethod
     def fromfile(cls, filename, verbose=False):
@@ -575,7 +576,7 @@ class FCS:
         V_eff = np.pi**(3/2)*self.parameters['w_xy']**2*self.parameters['w_z']*10**-15
         N_A = 6.022*10**23
         self.parameters['c_nM'] = self.parameters['N']/(V_eff*N_A*10**-9)
-        return '{:0.2f nM}'.format(self.parameters['c_nM'])
+        return '{:0.2f} nM'.format(self.parameters['c_nM'])
 
     def calcBrightness(self):
         """
@@ -585,7 +586,7 @@ class FCS:
 
 
 
-    def plotFCS(self, color=ncp.get_colors(bwo, 1), time_limits=(10**-7, 0.1), legend_strings=None, normalization='None', normalization_time=10**-6):
+    def plotFCS(self, color=ncp.get_colors(bwo, 1), time_limits=(10**-7, 0.1), legend_strings=None, normalization='None', normalization_time=10**-6, linecolor='k', figsize=(2.25, 2)):
         """
         Plot FCS curve
 
@@ -602,12 +603,12 @@ class FCS:
         normalization_time : float
                              reference time point for normalization method 'time'
         """
-        plotFCS([self], color_list=color, time_limits=time_limits, legend_strings=legend_strings, normalization=normalization)
+        ax = plotFCS([self], color_list=color, time_limits=time_limits, legend_strings=legend_strings, normalization=normalization, linecolor=linecolor, figsize=figsize)
+        return ax
 
 
 
-
-def plotFCS(fcs_list, color_list=None, time_limits=(10**-7, 0.1), legend_strings=None, normalization='None', normalization_time=10**-6):
+def plotFCS(fcs_list, color_list=None, time_limits=(10**-7, 0.1), legend_strings=None, normalization='None', normalization_time=10**-6, linecolor='k', figsize=(2.25, 2)):
     """
     Plot FCS curve
 
@@ -632,7 +633,7 @@ def plotFCS(fcs_list, color_list=None, time_limits=(10**-7, 0.1), legend_strings
 
     with sns.axes_style('ticks'):
         set_ticksStyle()
-        f, ax = plt.subplots(nrows=1, ncols=1, figsize=(2.25, 2), sharex=True, sharey=True, squeeze=False)
+        f, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize, sharex=True, sharey=True, squeeze=False)
         for i,fcs in enumerate(fcs_list):
             time = fcs.data.loc[(fcs.data['time']>time_limits[0]) & (fcs.data['time']<time_limits[1]), 'time']
             data = fcs.data.loc[(fcs.data['time']>time_limits[0]) & (fcs.data['time']<time_limits[1]), 'data']
@@ -650,13 +651,21 @@ def plotFCS(fcs_list, color_list=None, time_limits=(10**-7, 0.1), legend_strings
             else:
                 ax[0,0].set_ylabel('G($\\tau$)')
             ax[0,0].semilogx(time, data, '.', color=color_list[i])
-            ax[0,0].semilogx(time, fit, '-', color='k')
+            ax[0,0].semilogx(time, fit, '-', color=linecolor)
         
         ax[0,0].set_xlabel('lag time $\\tau$ (s)')
         ax[0,0].set_xlim(time_limits)
         if legend_strings is not None:
             ax[0,0].legend(legend_strings, frameon=False)
+        return ax
 
+def diffusion(tau, tau_D, N, w_xy, w_z):
+    s = w_z/w_xy
+    return 1/N*(1+tau/tau_D)**-1*(1+tau/(s**2*tau_D))**-(1/2)
+
+def diffusion_triplet(tau, tau_D, N, w_xy, w_z):
+    s = w_z/w_xy
+    return 1/N*(1+T/(1-T)*np.exp(-tau/tau_T))*(1+tau/tau_D)**-1*(1+tau/(s**2*tau_D))**-(1/2)
 
 class Timetrace:
     """
@@ -702,7 +711,7 @@ class Timetrace:
             f, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize, sharex=False, sharey=False, squeeze=False)
             ax[0,0].plot(self.GG.loc[(self.GG['time']>time_limits[0]) & (self.GG['time']<time_limits[1]), 'time'], self.GG.loc[(self.GG['time']>time_limits[0]) & (self.GG['time']<time_limits[1]), 'counts'], color=colors[0])
             ax[0,0].plot(self.GR.loc[(self.GR['time']>time_limits[0]) & (self.GR['time']<time_limits[1]), 'time'], -self.GR.loc[(self.GR['time']>time_limits[0]) & (self.GR['time']<time_limits[1]), 'counts'], color=colors[1])
-            ax[0,0].set_ylabel('counts')
+            ax[0,0].set_ylabel('photon counts')
             ax[0,0].set_xlabel('time (s)')
             ax[0,0].set_xlim(time_limits)
             ax[0,0].set_ylim(count_limits)
