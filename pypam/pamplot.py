@@ -237,6 +237,8 @@ class Hist2d:
         """
         Display a 2D contour / image / hex or scatter plot of the Burst Variance Analysis
 
+        Parameters
+        ----------
         x_axis : str
                  display FRET or proximity ratio on the x-axis('FRET', 'PR')
         x_axis_label : str

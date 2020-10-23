@@ -1,9 +1,10 @@
 % FCS data from workspace to file
 
 % FCS : struct
+%       columns are "time", "data", "error", "fit" and "residuals"
 % average_counts : column vector (n x 1 double) => manually copy from table into a column vector [c1;c2;...] on the Matlab command line
 
-% time, data, error, fit line and residuals
+
 function write_FCS(FCS, average_counts)
 
 %---------------------------------

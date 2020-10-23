@@ -1,9 +1,7 @@
 MatPAM
 ======
 
-
-Introduction
-------------
+*MatPAM* provides a set of export function to extract data from PAM to .json formatted ASCII files.
 
 Extract 2D histograms
 *********************
@@ -21,7 +19,8 @@ From the Matlab console run: ::
     # you may also add additional parameters to be included in the output json file
     extract_2Dplot('photons_per_window', 5)
 
-Currently implemented name-value pairs are:
+Currently implemented key-value pairs are:
+
 - photons_per_window (int)
 - crosstalk (float)
 - direct_excitation (float)
@@ -32,7 +31,7 @@ Currently implemented name-value pairs are:
 Export FCS fit results
 **********************
 
-From PAM's FCSfit module right-click on the plot and select `Èxport to workspace`.
+From PAM's FCSfit module right-click on the plot and select `Export to workspace`.
 
 .. image:: _static/write_FCS.png
     :width: 500
@@ -41,6 +40,15 @@ From PAM's FCSfit module right-click on the plot and select `Èxport to workspac
 From the Matlab console run: ::
 
     write_FCS(FCS)
+
+    # the average count rate can be included in the output json file. 
+    write_FCS(FCS, average_counts)
+
+The parameter ``average_counts`` should be a n x 1 column vector. Copy it manually from the fit table to the Matlab console.
+
+.. Note ::
+
+    The model that you use for fitting the data in PAM must be present in the ``write_fcs()`` skript. If you get a message: `-> model does not exist` add your model to the fit function definitions in ``write_fcs()`` skript.
 
 
 Extract timetrace
@@ -54,7 +62,8 @@ From PAM's main window right click on the intensity time trace and select `Expor
 
 From the Matlab console run: ::
     
+    # extract the entire trace
     extract_timetrace
 
-    # specify start and end times (in s)
+    # extract a range by specifying start and end times (in s)
     extract_timetrace('start_time', 0.001, 'end_time', 1)

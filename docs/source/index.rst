@@ -7,16 +7,9 @@
 
 .. toctree::
    :maxdepth: 2
-   :caption: Documentation:
+   :caption: Documentation
    :hidden:
 
-   pypam
    matpam
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Demos:
-   :hidden: 
-
-   tutorial/pamtools_tutorial
-
+   pypam
+   

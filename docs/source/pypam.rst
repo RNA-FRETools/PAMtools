@@ -1,20 +1,17 @@
 PyPAM
 =====
 
-
-Introduction
-------------
-
-The module `pamplot.py` implements functions to load .json formatted 2D data from PAM's BurstBrowser. An example experiment can be found in the PyPAM :doc:`tutorial <tutorial/pamtools_tutorial>`
+PyPAM is a Python module to plot and visualize data exported from PAM. It implements functions to load .json formatted 2D data from PAM's BurstBrowser and FCSFit. Get started by visiting the :doc:`tutorial<tutorial/pamtools_tutorial>`.
 
 .. image:: _static/pypam_2dhist.png
-   :width: 200
-   :align: center
+    :width: 300
+    :align: center
 
-Module description
-------------------
+.. toctree::
+   :maxdepth: 1
+   :caption: Documentation
+   :hidden: 
 
-.. automodule:: pypam.pamplot
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   tutorial/pamtools_tutorial
+   module
+

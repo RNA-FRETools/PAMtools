@@ -13,6 +13,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
+os.environ['PYTHONPATH'] = ':'.join((os.path.abspath('../..'), os.environ.get('PYTHONPATH', '')))
 
 
 # -- Project information -----------------------------------------------------
@@ -67,4 +68,8 @@ html_static_path = ['_static']
 
 html_logo = '_static/PAMtools_logo.png'
 
+html_css_files = ['css/custom.css']
+
 autoclass_content = 'both'
+
+html_theme_options = {'style_nav_header_background': '#333'}
