@@ -1,5 +1,6 @@
 # <img src="docs/source/_static/PAMtools_logo.png" width="50"> PAMtools   
 
+[![Docs Status](https://github.com/fdsteffen/PAMtools/workflows/PAMtools%20docs/badge.svg)](https://github.com/fdsteffen/PAMtools/actions)
 
 What is PAMtools
 ----------------
