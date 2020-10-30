@@ -12,20 +12,31 @@ from matplotlib.patches import Circle, Wedge, Polygon
 from matplotlib.collections import PatchCollection
 import naturalcolors.colorpalette as ncp
 
-# seaborn settings
 sns.set_style('white')
 sns.set_context("notebook")
 sns.set(font='Arial')
 
-#cols = [[0.31, 0.45, 0.56], [0.6, 0.6, 0.6], [0.75, 0.51, 0.38]]
 cols = [[0.1, 0.1, 0.1], [0.9, 0.9, 0.9]]
 cmap_list, cmap_linseg = ncp.make_colormap(cols, 'grayscale')
-#colors = ncp.get_colors(cmap_linseg, 5, scramble=True)
 colors = ncp.get_colors(cmap_linseg, 5)
 bwo = ncp.get_cmap('bluewhiteorange')
 
 
 def set_ticksStyle(x_size=4, y_size=4, x_dir='in', y_dir='in'):
+    """
+    Set seaborn style for plots
+
+    Parameters
+    ----------
+    x_size : float
+             length of x-ticks
+    y_size : float
+             length of y-ticks
+    x_dir : {'in', 'out'}
+            inwards ('in') or outwards ('out') facing ticks on x-axis
+    y_dir : {'in', 'out'}
+            inwards ('in') or outwards ('out') facing ticks on y-axis
+    """
     sns.set_style('ticks', {'xtick.major.size': x_size, 'ytick.major.size': y_size, 'xtick.direction': x_dir, 'ytick.direction': y_dir})
 
 
@@ -72,6 +83,17 @@ class Hist2d:
         ----------
         data : dict
                dictionary of 2D raw data ordered by contour, image, hex and scatter keys
+               additional parameters include:
+               - photons_per_window : flaot
+               - crosstalk : float
+                         donor-acceptor spectral crosstalk (percentage of donor emission into acceptor detection channel)
+               - gamma_factor : float
+                                difference in quantum yield and detection efficiency of donor and acceptor
+               - direct_excitation : float
+                                     percentage of direct acceptor excitation by the green laser
+               - donor_lifetime : float
+                                  lifetime of the donor fluorophore in the absence of an acceptor (donor-only
+        verbose : bool
         """
         self.contour = {}
         self.image = {}
@@ -207,6 +229,21 @@ class Hist2d:
     def plot1Dhist(self, axis_labels=('FRET', 'occupancy'), PAM_fit=True, PAMtools_fit=False, label=None, hist_color=[0.7, 0.7, 0.7], show_components=True):
         """
         Display a FRET histogram
+
+        Parameters
+        ----------
+        axis_labels : 2-tuple of str, optional
+                      labels of x and y-axis (default are 'FRET' and 'occupancy')
+        PAM_fit : bool, optional
+                  draw a fit line using PAM (default is True)
+        PAMtools_fit : bool, optional
+                       draw a fit line using PAMtools (default is False)
+        label : str, optional
+                additional label to include in the plot (default is None)
+        hist_color : str or array_like
+                     color of the histogram bars (default is [0.7, 0.7, 0.7])
+        show_components : bool, optional
+                          draw a fit line for the individual components of the fit function (default is True)
         """
         with sns.axes_style('ticks'):
             set_ticksStyle()
@@ -331,12 +368,12 @@ class Hist2d:
         self._fitfunction = fit_function
         self._y_data = y_data
         p, p_std = fit(self._model_func, x_data, y_data, p0, bounds=gauss_bounds)
-        A, x, y = self.nnls_convol_irfexp(x_data, p)
+        A, x, y = self._nnls_convol_irfexp(x_data, p)
         self.XY1DfitParam_PAMtools[a] = {'ampl': x / sum(x), 'mu': p[0::2], 'sigma': p[1::2]}
         self.XY1DfitParamStd_PAMtools[a] = {'mu': p_std[0::2], 'sigma': p_std[1::2]}
         halfbinwidth = (x_data[1]-x_data[0])/2
         self.XY1DfitSum_PAMtools[a, 'x'] = np.linspace(x_data[0]-halfbinwidth, x_data[-1]+halfbinwidth, 200)
-        A_fit = self.prepare_distributions(self.XY1DfitSum_PAMtools[a, 'x'], p)
+        A_fit = self._prepare_distributions(self.XY1DfitSum_PAMtools[a, 'x'], p)
         for i in range(len(x)):
             self.XY1DfitComp_PAMtools[a, 'y', i] = np.dot(A_fit[:, i], x[i])
         self.XY1DfitSum_PAMtools[a, 'y'] = np.dot(A_fit, np.array(x))
@@ -390,7 +427,7 @@ class Hist2d:
         beta = scipy.special.gamma(A+D)/(scipy.special.gamma(A)*scipy.special.gamma(D))*x_data**(A-1)*(1-x_data)**(D-1)
         return beta
 
-    def prepare_distributions(self, x_data, p0):
+    def _prepare_distributions(self, x_data, p0):
         distributions = []
         for k in range(0, len(p0), 2):
             if self._fitfunction == 'beta':
@@ -400,7 +437,7 @@ class Hist2d:
             A = np.array(distributions).T
         return A
 
-    def nnls_convol_irfexp(self, x_data, p0):
+    def _nnls_convol_irfexp(self, x_data, p0):
         """
         Solve non-negative least squares for series of IRF-convolved single-exponential decays.
         First, the IRF is shifted, then convolved with each exponential decay individually (decays 1,...,n),
@@ -425,7 +462,7 @@ class Hist2d:
             fit vector computed as `y = Ax`
 
         """
-        A = self.prepare_distributions(x_data, p0)
+        A = self._prepare_distributions(x_data, p0)
         x, rnorm = scipy.optimize.nnls(A, self._y_data)
         y = np.dot(A, np.array(x))
         return A, x, y
@@ -450,7 +487,7 @@ class Hist2d:
         y : ndarray
             fit vector computed as `y = Ax`
         """
-        A, x, y = self.nnls_convol_irfexp(x_data, p0)
+        A, x, y = self._nnls_convol_irfexp(x_data, p0)
         return y
 
     def PR2FRET(self, proximity_ratio, verbose=False):
@@ -460,12 +497,8 @@ class Hist2d:
         Parameters
         ----------
         proximity_ratio : array_like
-        alpha : float
-                donor-acceptor spectral crosstalk (percentage of donor emission into acceptor detection channel)
-        gamma : float
-                difference in quantum yield and detection efficieny of donor and acceptor
-        delta : float
-                percentage of direct acceptor excitation by the green laser
+        verbose : bool, optional
+                  be verbose on missing additional keys (default is False)
 
         Returns
         -------

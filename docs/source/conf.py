@@ -17,13 +17,14 @@ os.environ['PYTHONPATH'] = ':'.join((os.path.abspath('../..'), os.environ.get('P
 
 
 # -- Project information -----------------------------------------------------
+about = {}
+with open('../../__about__.py') as a:
+    exec(a.read(), about)
 
-project = 'PAMtools'
-copyright = '2020, Fabio D. Steffen'
-author = 'Fabio D. Steffen'
-
-# The full version, including alpha/beta/rc tags
-release = '0.1.0'
+project = about['__title__']
+copyright = about['__copyright__']
+author = about['__author__']
+release = about['__version__']
 
 
 # -- General configuration ---------------------------------------------------
