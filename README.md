@@ -1,4 +1,4 @@
-# <img src="docs/source/_static/PAMtools_logo.png" width="50"> PAMtools   
+# <img src="docs/source/_static/PAMtools_logo.png" width="200">   
 
 [![Docs Status](https://github.com/fdsteffen/PAMtools/workflows/PAMtools%20docs/badge.svg)](https://github.com/fdsteffen/PAMtools/actions)
 
