@@ -74,27 +74,31 @@ def fit(fun, x_data, y_data, p0, bounds=(-np.inf, np.inf)):
 
 
 class Hist2d:
+    """
+    2D histogram class
+
+    Parameters
+    ----------
+    data : dict
+           dictionary of 2D raw data ordered by contour, image, hex and scatter keys
+    verbose : bool
+
+    Notes
+    -----
+    The data dictionary can include additional keys:
+
+       - photons_per_window : float
+       - crosstalk : float
+                 donor-acceptor spectral crosstalk (percentage of donor emission into acceptor detection channel)
+       - gamma_factor : float
+                        difference in quantum yield and detection efficiency of donor and acceptor
+       - direct_excitation : float
+                             percentage of direct acceptor excitation by the green laser
+       - donor_lifetime : float
+                          lifetime of the donor fluorophore in the absence of an acceptor (donor-only)
+    """
 
     def __init__(self, data, verbose=False):
-        """
-        2D histogram class
-
-        Attributes
-        ----------
-        data : dict
-               dictionary of 2D raw data ordered by contour, image, hex and scatter keys
-               additional parameters include:
-               - photons_per_window : flaot
-               - crosstalk : float
-                         donor-acceptor spectral crosstalk (percentage of donor emission into acceptor detection channel)
-               - gamma_factor : float
-                                difference in quantum yield and detection efficiency of donor and acceptor
-               - direct_excitation : float
-                                     percentage of direct acceptor excitation by the green laser
-               - donor_lifetime : float
-                                  lifetime of the donor fluorophore in the absence of an acceptor (donor-only
-        verbose : bool
-        """
         self.contour = {}
         self.image = {}
         self.hex = {}
@@ -504,8 +508,9 @@ class Hist2d:
         -------
         FRET : array_like
         
-        Reference
-        ---------
+        References
+        ----------
+        PAM source code: Dynamic_Analysis.m
         """
         try:
             FRET = (1-(1+self.parameters['crosstalk']+self.parameters['direct_excitation'])*(1-proximity_ratio))/(1-(1+self.parameters['crosstalk']-self.parameters['gamma_factor'])*(1-proximity_ratio))
