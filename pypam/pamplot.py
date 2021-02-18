@@ -524,6 +524,18 @@ class Hist2d:
     def sigma_shotnoise(self, verbose=False):
         """
         Calculate shot noise limit from Burst Variance Analysis (BVA)
+
+        Notes
+        -----
+        Preprocessing done in PAM: Each burst is segmented into M samples of n consecutive photons 
+        (n is set in Dynamic Analysis Window in PAM). The transfer efficiency (or proximity ratio) is 
+        calculated for each n-photon sample and the standard deviation is calculated from these M FRET values,
+        giving one std per burst.
+        Here: the shot noise limit is calculated as sqrt(PR*(1-PR)/n)
+
+        References
+        ----------
+        Torella, Holden, Santosio, Hohlbein, Kapanidis, Biophysical J., 2011.
         """
         self.BVA = {}
         self.BVA['PR'] = np.linspace(0,1,1000)

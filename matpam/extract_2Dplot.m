@@ -1,5 +1,5 @@
 % Extract 2D histogram drawn in PAM and exported to a Matlab figure
-
+%
 % Specify any additional dictionary elements to be included in the json
 % output file as name-value pairs. 
 % 
@@ -10,8 +10,8 @@
 % - gamma_factor (float)
 % - donor_lifetime (float)
 %
-% Example: extract_2Dplot('photons_per_window', 5, 'direct_excitation', 0.046, ... 
-%                         'crosstalk', 0.11, 'gamma_factor', 0.89)
+% Example: extract_2Dplot('photons_per_window', 5, 'direct_excitation', 0.02, ... 
+%                         'crosstalk', 0.1, 'gamma_factor', 0.7)
 %
 
 function extract_2Dplot(varargin)
