@@ -16,7 +16,11 @@ PAMtools is documented [here](https://fdsteffen.github.io/PAMtools/).
 Download and install
 --------------------
 
-Clone or [download](https://github.com/fdsteffen/PAMtools/archive/master.zip) PAMtools into a directory of your choice.
+1. Make sure that you have Matlab (including the curvefit and Statistics and machine Learning toolbox installed).
+
+2. Install [PAM](https://gitlab.com/PAM-PIE/PAM)
+
+3. Clone or [download](https://github.com/fdsteffen/PAMtools/archive/master.zip) PAMtools into a directory of your choice.
 ```
 git clone https://github.com/fdsteffen/PAMtools.git
 ```
@@ -28,6 +32,10 @@ pip install --user git+https://github.com/fdsteffen/PAMtools.git
 or
 pip install --user -e <path/to/PAMtools>
 ```
+
+4. Copy the file in `matpam/profiles/profile PIE.mat`` into the profiles directory in PAM.
+
+5. Copy the FCS models in `matpam/models` to the Models directory in PAM
 
 Dependencies
 ------------
