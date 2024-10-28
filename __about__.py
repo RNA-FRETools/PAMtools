@@ -1,9 +1,0 @@
-__title__ = 'PAMtools'
-__version__ = '0.1.0'
-__license__ = 'MIT'
-__author__ = 'Fabio D. Steffen'
-__email__ = 'fabio.steffen@chem.uzh.ch'
-__description__ = 'Visualization tools for PAM'
-__keywords__ = 'PAM, FRET, TCSPC, confocal imaging, fluorescence, spectroscopy'
-__url__ = 'https://github.com/fdsteffen/PAMtools'
-__copyright__ = '2020 {}'.format(__author__)

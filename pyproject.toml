@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "pamtools"
+version = "0.1.0"
+description = "Visualization tools for the 'PIE Analysis with MATLAB' (PAM) software package"
+authors = ["Fabio Steffen <fabio.steffen@chem.uzh.ch>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://rna-fretools.github.io/"
+repository = "https://github.com/fdsteffen/PAMtools"
+documentation = "https://rna-fretools.github.io/pamtools/"
+keywords = ["PIE", "FRET", "TCSPC", "confocal imaging", "fluorescence", "spectroscopy"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Matlab",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+pandas = "^2.2.3"
+matplotlib = "^3.9.2"
+seaborn = "^0.13.2"
+naturalcolors = "^1.0.2"
+phconvert = "^0.9.1"
+scipy = [
+    {version = "<1.14.1", python = ">=3.9,<3.10"},
+    {version = ">=1.14.1", python = ">=3.10"}
+]
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.black]
+line-length = 120
