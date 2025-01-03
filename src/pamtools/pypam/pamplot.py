@@ -751,8 +751,7 @@ class FCS:
             parameters["y0"] = 0
         return cls(data, parameters, verbose)
 
-    @staticmethod
-    def hydrodynamic_radius(D, T=298.15, eta=8.9 * 10**-4):
+    def hydrodynamic_radius(self, T=298.15, eta=8.9 * 10**-4):
         """
         Calculate the hydrodnamic radius in nanometer
 
@@ -763,6 +762,7 @@ class FCS:
         eta : float
               viscosity of the solvent in Pa*s
         """
+        D = self.parameters["D"]
         return 1.38 * 10**-23 * T / (6 * np.pi * eta * D * 10**-12) * 10**9
 
     def calcConcentration(self):
@@ -883,7 +883,7 @@ def diffusion(tau, tau_D, N, w_xy, w_z):
     return 1 / N * (1 + tau / tau_D) ** -1 * (1 + tau / (s**2 * tau_D)) ** -(1 / 2)
 
 
-def diffusion_triplet(tau, tau_D, N, w_xy, w_z):
+def diffusion_triplet(tau, tau_D, tau_T, T, N, w_xy, w_z):
     s = w_z / w_xy
     return (
         1
